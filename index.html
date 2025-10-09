@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTSU GPA Calculator</title>
+    <title>Jones College of Business GPA Calculator</title>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <div id="root"></div>
@@ -42,6 +44,10 @@
             const [plannedCredits, setPlannedCredits] = useState('');
             const [duplicateDialog, setDuplicateDialog] = useState(null);
             const [activeSemester, setActiveSemester] = useState(0);
+            const [colorScheme, setColorScheme] = useState('blue');
+            const [showPDFDialog, setShowPDFDialog] = useState(false);
+            const [studentName, setStudentName] = useState('');
+            const [studentMNumber, setStudentMNumber] = useState('');
             
             const [candidacyGrades, setCandidacyGrades] = useState({
                 'ECON 2410': '',
@@ -49,6 +55,166 @@
                 'BIA 2610': '',
                 'ACTG 2110': ''
             });
+
+            const colorSchemes = {
+                blue: {
+                    name: 'MTSU Blue (Default)',
+                    mood: 'Professional & Trustworthy',
+                    header: 'linear-gradient(135deg, #03045e 0%, #0077b6 100%)',
+                    subtitle: '#90e0ef',
+                    navButton1: '#0077b6',  // Calculate GPA - primary blue
+                    navButton2: '#00b4d8',  // Goal Planner - lighter blue
+                    navButton3: '#0096c7',  // Jones Candidacy - mid blue
+                    addButton: '#48cae4',   // Add Semester - lightest blue
+                    activeTab: '#023e8a',   // Active semester tab
+                    card1: 'linear-gradient(135deg, #0077b6 0%, #0096c7 100%)',
+                    card2: 'linear-gradient(135deg, #00b4d8 0%, #48cae4 100%)',
+                    card3: 'linear-gradient(135deg, #023e8a 0%, #0077b6 100%)',
+                    card4: 'linear-gradient(135deg, #0096c7 0%, #00b4d8 100%)',
+                    infoBox: '#48cae4',
+                    actionButton: '#0077b6'  // Add Course, Reset buttons
+                },
+                mono: {
+                    name: 'Monochrome + Accent',
+                    mood: 'Corporate & Elegant',
+                    header: 'linear-gradient(135deg, #2d3748 0%, #4a5568 100%)',
+                    subtitle: '#e2e8f0',
+                    navButton1: '#718096',  // gray-blue
+                    navButton2: '#a0aec0',  // light gray
+                    navButton3: '#4a5568',  // medium gray
+                    addButton: '#f56565',   // red accent
+                    activeTab: '#2d3748',
+                    card1: 'linear-gradient(135deg, #4a5568 0%, #718096 100%)',
+                    card2: 'linear-gradient(135deg, #718096 0%, #a0aec0 100%)',
+                    card3: 'linear-gradient(135deg, #2d3748 0%, #4a5568 100%)',
+                    card4: 'linear-gradient(135deg, #a0aec0 0%, #cbd5e0 100%)',
+                    infoBox: '#cbd5e0',
+                    actionButton: '#4a5568'
+                },
+                olive: {
+                    name: 'Olive Garden Feast',
+                    mood: 'Warm & Rustic',
+                    header: 'linear-gradient(135deg, #283618 0%, #606c38 100%)',
+                    subtitle: '#fefae0',
+                    navButton1: '#606c38',  // olive green
+                    navButton2: '#dda15e',  // golden tan
+                    navButton3: '#bc6c25',  // burnt orange
+                    addButton: '#dda15e',   // golden tan
+                    activeTab: '#283618',   // dark forest
+                    card1: 'linear-gradient(135deg, #606c38 0%, #283618 100%)',
+                    card2: 'linear-gradient(135deg, #dda15e 0%, #fefae0 100%)',
+                    card3: 'linear-gradient(135deg, #bc6c25 0%, #dda15e 100%)',
+                    card4: 'linear-gradient(135deg, #606c38 0%, #dda15e 100%)',
+                    infoBox: '#dda15e',
+                    actionButton: '#606c38'
+                },
+                fiery: {
+                    name: 'Fiery Ocean',
+                    mood: 'Bold & Contrasting',
+                    header: 'linear-gradient(135deg, #780000 0%, #003049 100%)',
+                    subtitle: '#fdf0d5',
+                    navButton1: '#c1121f',  // bright red (solid)
+                    navButton2: '#003049',  // deep ocean blue (solid)
+                    navButton3: '#669bbc',  // light ocean blue (solid)
+                    addButton: '#780000',   // dark red (solid)
+                    activeTab: '#780000',   // dark red
+                    card1: 'linear-gradient(135deg, #c1121f 0%, #780000 100%)',
+                    card2: 'linear-gradient(135deg, #003049 0%, #669bbc 100%)',
+                    card3: 'linear-gradient(135deg, #780000 0%, #c1121f 100%)',
+                    card4: 'linear-gradient(135deg, #669bbc 0%, #fdf0d5 100%)',
+                    infoBox: '#669bbc',
+                    actionButton: '#003049'
+                },
+                golden: {
+                    name: 'Golden Summer Fields',
+                    mood: 'Soft & Peaceful',
+                    header: 'linear-gradient(135deg, #d4a373 0%, #ccd5ae 100%)',
+                    subtitle: '#fefae0',
+                    navButton1: '#ccd5ae',  // sage green (solid)
+                    navButton2: '#e9edc9',  // pale green (solid)
+                    navButton3: '#faedcd',  // cream (solid)
+                    addButton: '#d4a373',   // tan brown (solid)
+                    activeTab: '#d4a373',   // tan brown
+                    card1: '#ccd5ae',       // sage green (solid)
+                    card2: '#e9edc9',       // pale green (solid)
+                    card3: '#faedcd',       // cream (solid)
+                    card4: '#d4a373',       // tan brown (solid)
+                    infoBox: '#faedcd',
+                    actionButton: '#ccd5ae',
+                    cardText: '#2c3e1f',    // dark green text for cards
+                    buttonText: '#2c3e1f'   // dark green text for buttons
+                },
+                earth: {
+                    name: 'Muted Earth Tones',
+                    mood: 'Calm & Natural',
+                    header: 'linear-gradient(135deg, #3e2723 0%, #5d4037 100%)',
+                    subtitle: '#d7ccc8',
+                    navButton1: '#6d4c41',  // warm brown
+                    navButton2: '#7cb342',  // forest green
+                    navButton3: '#8d6e63',  // clay
+                    addButton: '#9ccc65',   // light green
+                    activeTab: '#4e342e',
+                    card1: 'linear-gradient(135deg, #6d4c41 0%, #8d6e63 100%)',
+                    card2: 'linear-gradient(135deg, #7cb342 0%, #9ccc65 100%)',
+                    card3: 'linear-gradient(135deg, #5d4037 0%, #6d4c41 100%)',
+                    card4: 'linear-gradient(135deg, #8d6e63 0%, #a1887f 100%)',
+                    infoBox: '#9ccc65',
+                    actionButton: '#6d4c41'
+                },
+                pastel: {
+                    name: 'Soft Pastels + Bold Accent',
+                    mood: 'Modern & Airy',
+                    header: 'linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%)',
+                    subtitle: '#f3e5f5',
+                    navButton1: '#ce93d8',  // soft purple
+                    navButton2: '#90caf9',  // soft blue
+                    navButton3: '#a5d6a7',  // soft green
+                    addButton: '#7b1fa2',   // bold purple accent
+                    activeTab: '#6a1b9a',
+                    card1: 'linear-gradient(135deg, #ce93d8 0%, #e1bee7 100%)',
+                    card2: 'linear-gradient(135deg, #90caf9 0%, #bbdefb 100%)',
+                    card3: 'linear-gradient(135deg, #a5d6a7 0%, #c8e6c9 100%)',
+                    card4: 'linear-gradient(135deg, #ba68c8 0%, #ce93d8 100%)',
+                    infoBox: '#e1bee7',
+                    actionButton: '#ab47bc'
+                },
+                dark: {
+                    name: 'Dark Mode Professional',
+                    mood: 'Sophisticated & Modern',
+                    header: 'linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%)',
+                    subtitle: '#e0e1dd',
+                    navButton1: '#415a77',  // steel blue
+                    navButton2: '#778da9',  // light steel
+                    navButton3: '#0d1b2a',  // deep navy
+                    addButton: '#778da9',   // light steel (changed from gold)
+                    activeTab: '#1b263b',
+                    card1: 'linear-gradient(135deg, #415a77 0%, #778da9 100%)',
+                    card2: 'linear-gradient(135deg, #778da9 0%, #e0e1dd 100%)',
+                    card3: 'linear-gradient(135deg, #1b263b 0%, #415a77 100%)',
+                    card4: 'linear-gradient(135deg, #0d1b2a 0%, #415a77 100%)',
+                    infoBox: '#778da9',
+                    actionButton: '#415a77'
+                },
+                neon: {
+                    name: 'Neon Gradient Tech',
+                    mood: 'Energetic & Futuristic',
+                    header: 'linear-gradient(135deg, #6a00f4 0%, #c471ed 100%)',
+                    subtitle: '#f72585',
+                    navButton1: '#7209b7',  // deep purple
+                    navButton2: '#f72585',  // hot pink
+                    navButton3: '#4cc9f0',  // cyan
+                    addButton: '#4361ee',   // electric blue
+                    activeTab: '#560bad',
+                    card1: 'linear-gradient(135deg, #7209b7 0%, #b5179e 100%)',
+                    card2: 'linear-gradient(135deg, #f72585 0%, #c9184a 100%)',
+                    card3: 'linear-gradient(135deg, #4cc9f0 0%, #4895ef 100%)',
+                    card4: 'linear-gradient(135deg, #4361ee 0%, #7209b7 100%)',
+                    infoBox: '#c471ed',
+                    actionButton: '#7209b7'
+                }
+            };
+
+            const currentColors = colorSchemes[colorScheme];
 
             const gradePoints = {
                 'A': 4.0,
@@ -68,6 +234,12 @@
 
             useEffect(() => {
                 const savedData = localStorage.getItem('mtsuGPAData');
+                const savedTheme = localStorage.getItem('mtsuColorTheme');
+                
+                if (savedTheme) {
+                    setColorScheme(savedTheme);
+                }
+                
                 if (savedData) {
                     try {
                         const parsed = JSON.parse(savedData);
@@ -89,6 +261,10 @@
                     }));
                 }
             }, [semesters, activeSemester]);
+
+            useEffect(() => {
+                localStorage.setItem('mtsuColorTheme', colorScheme);
+            }, [colorScheme]);
 
             const initializeFirstSemester = () => {
                 setSemesters([{
@@ -331,20 +507,70 @@
             };
 
             const getTotalCredits = () => {
-                let earned = 0;
                 let attempted = 0;
+                const courseGroups = {};
                 
+                // Count all attempts as attempted credits
                 semesters.forEach(semester => {
                     semester.courses.forEach(course => {
                         const credits = parseFloat(course.credits);
-                        const grade = course.grade;
                         if (credits) {
                             attempted += credits;
-                            if (grade && grade !== 'F' && grade !== 'FA' && grade !== 'W') {
-                                earned += credits;
-                            }
                         }
                     });
+                });
+                
+                // For earned credits, group by course name and only count the most recent passing grade
+                semesters.forEach((semester, semIndex) => {
+                    semester.courses.forEach((course, courseIndex) => {
+                        const credits = parseFloat(course.credits);
+                        const grade = course.grade;
+                        
+                        if (credits && grade) {
+                            const baseName = course.name.replace(/\s*\(R\)\s*$/i, '').trim().toLowerCase();
+                            
+                            if (!courseGroups[baseName]) {
+                                courseGroups[baseName] = [];
+                            }
+                            
+                            courseGroups[baseName].push({
+                                credits: credits,
+                                grade: grade,
+                                semesterIndex: semIndex,
+                                courseIndex: courseIndex
+                            });
+                        }
+                    });
+                });
+                
+                let earned = 0;
+                Object.values(courseGroups).forEach(group => {
+                    if (group.length === 1) {
+                        // Single attempt - count if passing
+                        if (group[0].grade && group[0].grade !== 'F' && group[0].grade !== 'FA' && group[0].grade !== 'W') {
+                            earned += group[0].credits;
+                        }
+                    } else if (group.length === 2 || group.length === 3) {
+                        // 2-3 attempts - only count credits from most recent attempt if passing
+                        const mostRecent = group.reduce((latest, current) => {
+                            if (current.semesterIndex > latest.semesterIndex) {
+                                return current;
+                            } else if (current.semesterIndex === latest.semesterIndex && current.courseIndex > latest.courseIndex) {
+                                return current;
+                            }
+                            return latest;
+                        });
+                        if (mostRecent.grade && mostRecent.grade !== 'F' && mostRecent.grade !== 'FA' && mostRecent.grade !== 'W') {
+                            earned += mostRecent.credits;
+                        }
+                    } else {
+                        // 4+ attempts - count credits from each passing attempt
+                        group.forEach(attempt => {
+                            if (attempt.grade && attempt.grade !== 'F' && attempt.grade !== 'FA' && attempt.grade !== 'W') {
+                                earned += attempt.credits;
+                            }
+                        });
+                    }
                 });
                 
                 return { earned: earned.toFixed(1), attempted: attempted.toFixed(1) };
@@ -462,6 +688,14 @@
                     return { error: "Credit hours cannot be negative" };
                 }
 
+                // Check if current GPA already meets or exceeds goal
+                if (current >= goal) {
+                    return {
+                        success: true,
+                        message: `Great news! You've already achieved your goal. Your current GPA of ${current.toFixed(3)} meets or exceeds your goal of ${goal.toFixed(3)}.`
+                    };
+                }
+
                 const currentPoints = current * currentCred;
                 const totalCreditsNeeded = currentCred + planned;
                 const totalPointsNeeded = goal * totalCreditsNeeded;
@@ -473,23 +707,9 @@
                 if (requiredGPA > 4.0) {
                     const maxAchievableGPA = ((currentPoints + (4.0 * planned)) / totalCreditsNeeded).toFixed(3);
                     
-                    if (parseFloat(maxAchievableGPA) >= goal) {
-                        return {
-                            success: true,
-                            message: `Great news! You've already achieved or can reach your goal GPA of ${goal.toFixed(3)}. With perfect grades (4.0) in your next ${planned} credit ${creditHourText}, you can reach a ${maxAchievableGPA} GPA.`
-                        };
-                    }
-                    
                     return { 
                         error: "Goal is not achievable",
-                        message: `Even with perfect grades (4.0) in ${planned} credit ${creditHourText}, you can only reach a ${maxAchievableGPA} GPA.`
-                    };
-                }
-
-                if (requiredGPA < 0) {
-                    return {
-                        success: true,
-                        message: `Great news! You've already exceeded your goal GPA. Your current GPA of ${current.toFixed(3)} is higher than your goal of ${goal.toFixed(3)}.`
+                        message: `Even with perfect grades (4.0) in ${planned} credit ${creditHourText}, you can only reach a ${maxAchievableGPA} GPA. Your goal of ${goal.toFixed(3)} is not achievable with ${planned} credit hours.`
                     };
                 }
 
@@ -510,9 +730,7 @@
                     requiredGPA: requiredGPA.toFixed(3),
                     closestGrade: closestGrade,
                     gradeValue: gradePoints[closestGrade].toFixed(1),
-                    message: requiredGPA <= 4.0 ?
-                        `To reach your goal GPA of ${goal.toFixed(3)}, you need to earn an average of ${requiredGPA.toFixed(3)} across ${planned} credit ${creditHourText}. This is approximately a ${closestGrade} (${gradePoints[closestGrade].toFixed(2)}) average.` :
-                        null
+                    message: `To reach your goal GPA of ${goal.toFixed(3)}, you need to earn an average of ${requiredGPA.toFixed(3)} across ${planned} credit ${creditHourText}. This is approximately a ${closestGrade} (${gradePoints[closestGrade].toFixed(2)}) average.`
                 };
             };
 
@@ -523,12 +741,268 @@
                 }
             };
 
+            const exportToPDF = () => {
+                if (!studentName.trim() || !studentMNumber.trim()) {
+                    alert('Please enter your name and M# to generate the PDF.');
+                    return;
+                }
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margin = 20;
+                let yPos = 20;
+                
+                // Title
+                doc.setFontSize(18);
+                doc.setFont(undefined, 'bold');
+                doc.text('Jones College of Business GPA Calculator', pageWidth / 2, yPos, { align: 'center' });
+                
+                yPos += 10;
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'normal');
+                doc.text('Middle Tennessee State University', pageWidth / 2, yPos, { align: 'center' });
+                
+                yPos += 15;
+                doc.setFontSize(10);
+                doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPos, { align: 'center' });
+                
+                // Student Info
+                yPos += 12;
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'bold');
+                doc.text(`Student: ${studentName}`, margin, yPos);
+                yPos += 7;
+                doc.text(`M#: ${studentMNumber}`, margin, yPos);
+                
+                // Check which calculator is active and generate appropriate content
+                if (showCandidacy) {
+                    // Jones Candidacy PDF
+                    yPos += 15;
+                    doc.setFontSize(14);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Jones College Candidacy Requirements', margin, yPos);
+                    
+                    yPos += 10;
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'normal');
+                    
+                    const courses = ['ECON 2410', 'ECON 2420', 'BIA 2610', 'ACTG 2110'];
+                    courses.forEach(course => {
+                        const grade = candidacyGrades[course];
+                        const gradeText = grade ? `${grade} (${gradePoints[grade].toFixed(2)})` : 'Not Taken Yet';
+                        doc.text(`${course}: ${gradeText}`, margin, yPos);
+                        yPos += 7;
+                    });
+                    
+                    const result = calculateCandidacyStatus();
+                    if (result) {
+                        yPos += 10;
+                        doc.setFontSize(12);
+                        doc.setFont(undefined, 'bold');
+                        doc.text(`Pre-Business Course GPA: ${result.gpa}`, margin, yPos);
+                        
+                        yPos += 10;
+                        doc.setFontSize(11);
+                        doc.setFont(undefined, 'normal');
+                        
+                        if (result.success) {
+                            doc.setTextColor(0, 128, 0);
+                            doc.text('Status: Requirements Met!', margin, yPos);
+                        } else if (result.partial) {
+                            doc.setTextColor(200, 150, 0);
+                            doc.text(`Status: In Progress (${result.completed} of 4 courses)`, margin, yPos);
+                            yPos += 7;
+                            doc.text(`Target Grade Needed: ${result.neededGrade}`, margin, yPos);
+                        } else {
+                            doc.setTextColor(200, 0, 0);
+                            doc.text('Status: Requirements Not Met', margin, yPos);
+                            yPos += 7;
+                            doc.text(`Recommended: Repeat ${result.lowestCourse}`, margin, yPos);
+                            yPos += 7;
+                            doc.text(`Target Grade: ${result.neededGrade}`, margin, yPos);
+                        }
+                        doc.setTextColor(0, 0, 0);
+                    }
+                    
+                } else if (showGoalPlanner) {
+                    // Goal Planner PDF
+                    yPos += 15;
+                    doc.setFontSize(14);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('GPA Goal Planner', margin, yPos);
+                    
+                    yPos += 10;
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'normal');
+                    
+                    doc.text(`Current GPA: ${currentGPA || 'Not entered'}`, margin, yPos);
+                    yPos += 7;
+                    doc.text(`Current GPA Hours: ${currentCredits || 'Not entered'}`, margin, yPos);
+                    yPos += 7;
+                    doc.text(`Goal GPA: ${goalGPA || 'Not entered'}`, margin, yPos);
+                    yPos += 7;
+                    doc.text(`Planned Credit Hours: ${plannedCredits || 'Not entered'}`, margin, yPos);
+                    
+                    const result = calculateGoalGrade();
+                    if (result) {
+                        yPos += 12;
+                        doc.setFontSize(12);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('Results:', margin, yPos);
+                        
+                        yPos += 8;
+                        doc.setFontSize(11);
+                        doc.setFont(undefined, 'normal');
+                        
+                        if (result.error) {
+                            doc.setTextColor(200, 0, 0);
+                            doc.text(`Error: ${result.error}`, margin, yPos);
+                            if (result.message) {
+                                yPos += 7;
+                                doc.text(result.message, margin, yPos, { maxWidth: pageWidth - 2 * margin });
+                            }
+                        } else if (result.success) {
+                            doc.setTextColor(0, 128, 0);
+                            if (result.requiredGPA) {
+                                doc.text(`Required GPA: ${result.requiredGPA}`, margin, yPos);
+                                yPos += 7;
+                                doc.text(`Target Grade Average: ${result.closestGrade} (${result.gradeValue})`, margin, yPos);
+                            } else {
+                                doc.text('Goal Already Achieved!', margin, yPos);
+                            }
+                        }
+                        doc.setTextColor(0, 0, 0);
+                    }
+                    
+                } else {
+                    // GPA Calculator PDF
+                    yPos += 15;
+                    doc.setFontSize(14);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('GPA Summary', margin, yPos);
+                    
+                    yPos += 10;
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'normal');
+                    
+                    const credits = getTotalCredits();
+                    doc.text(`Cumulative GPA: ${calculateCumulativeGPA()}`, margin, yPos);
+                    yPos += 7;
+                    doc.text(`Credits Earned: ${credits.earned}`, margin, yPos);
+                    yPos += 7;
+                    doc.text(`Credits Attempted: ${credits.attempted}`, margin, yPos);
+                    
+                    // Semesters
+                    yPos += 15;
+                    doc.setFontSize(14);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Semester Breakdown', margin, yPos);
+                    
+                    semesters.forEach((semester, semIndex) => {
+                        yPos += 12;
+                        
+                        // Check if we need a new page
+                        if (yPos > 250) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        
+                        doc.setFontSize(12);
+                        doc.setFont(undefined, 'bold');
+                        doc.text(`${semester.name} (Semester GPA: ${calculateSemesterGPA(semIndex)})`, margin, yPos);
+                        
+                        yPos += 8;
+                        doc.setFontSize(10);
+                        doc.setFont(undefined, 'normal');
+                        
+                        semester.courses.forEach(course => {
+                            if (course.name && course.credits && course.grade) {
+                                if (yPos > 270) {
+                                    doc.addPage();
+                                    yPos = 20;
+                                }
+                                const gradeText = gradePoints[course.grade] !== null ? 
+                                    `${course.grade} (${gradePoints[course.grade].toFixed(2)})` : 
+                                    course.grade;
+                                doc.text(`  • ${course.name} - ${course.credits} credits - ${gradeText}`, margin + 5, yPos);
+                                yPos += 6;
+                            }
+                        });
+                    });
+                }
+                
+                // Footer
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setFont(undefined, 'italic');
+                    doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 285, { align: 'center' });
+                }
+                
+                const calculatorType = showCandidacy ? 'Candidacy' : showGoalPlanner ? 'GoalPlanner' : 'GPA';
+                doc.save(`${studentMNumber}_${calculatorType}_Report.pdf`);
+                setShowPDFDialog(false);
+            };
+
             if (semesters.length === 0) {
                 return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
             }
 
             return (
                 <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-6">
+                    {showPDFDialog && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                                <h3 className="text-xl font-bold text-gray-800 mb-4">Export to PDF</h3>
+                                <p className="text-gray-700 mb-4">Please enter your information to generate your GPA report.</p>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Student Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g., John Smith"
+                                        value={studentName}
+                                        onChange={(e) => setStudentName(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                
+                                <div className="mb-6">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        M Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g., M01234567"
+                                        value={studentMNumber}
+                                        onChange={(e) => setStudentMNumber(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                
+                                <div className="flex gap-3 justify-end">
+                                    <button
+                                        onClick={() => setShowPDFDialog(false)}
+                                        className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition font-semibold"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={exportToPDF}
+                                        className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-semibold"
+                                    >
+                                        Generate PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
                     {duplicateDialog && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                             <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
@@ -555,9 +1029,25 @@
                     )}
 
                     <div className="max-w-6xl mx-auto">
-                        <div className="bg-blue-600 text-white rounded-t-lg p-6 shadow-lg" style={{background: 'linear-gradient(135deg, #03045e 0%, #0077b6 100%)'}}>
-                            <h1 className="text-3xl font-bold text-center">MTSU GPA Calculator</h1>
-                            <p className="text-center mt-2" style={{color: '#90e0ef'}}>Middle Tennessee State University</p>
+                        <div className="bg-blue-600 text-white rounded-t-lg p-6 shadow-lg" style={{background: currentColors.header}}>
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex-1">
+                                    <h1 className="text-3xl font-bold text-center">Jones College of Business GPA Calculator</h1>
+                                    <p className="text-center mt-2" style={{color: currentColors.subtitle}}>Middle Tennessee State University</p>
+                                </div>
+                                <div className="ml-4">
+                                    <label className="block text-sm mb-1 opacity-90">Color Theme</label>
+                                    <select
+                                        value={colorScheme}
+                                        onChange={(e) => setColorScheme(e.target.value)}
+                                        className="px-3 py-2 rounded text-gray-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-white"
+                                    >
+                                        {Object.entries(colorSchemes).map(([key, scheme]) => (
+                                            <option key={key} value={key}>{scheme.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                             
                             <div className="flex flex-wrap justify-center gap-4 mt-4">
                                 <button
@@ -570,7 +1060,7 @@
                                             ? 'bg-white font-semibold'
                                             : 'hover:opacity-80'
                                     }`}
-                                    style={!showGoalPlanner && !showCandidacy ? {color: '#03045e'} : {backgroundColor: '#0096c7', color: 'white'}}
+                                    style={!showGoalPlanner && !showCandidacy ? {color: '#03045e'} : {backgroundColor: currentColors.navButton1, color: currentColors.buttonText || 'white'}}
                                 >
                                     Calculate GPA
                                 </button>
@@ -584,7 +1074,7 @@
                                             ? 'bg-white font-semibold'
                                             : 'hover:opacity-80'
                                     }`}
-                                    style={showGoalPlanner && !showCandidacy ? {color: '#03045e'} : {backgroundColor: '#0096c7', color: 'white'}}
+                                    style={showGoalPlanner && !showCandidacy ? {color: '#03045e'} : {backgroundColor: currentColors.navButton2, color: currentColors.buttonText || 'white'}}
                                 >
                                     Goal Planner
                                 </button>
@@ -598,7 +1088,7 @@
                                             ? 'bg-white font-semibold'
                                             : 'hover:opacity-80'
                                     }`}
-                                    style={showCandidacy ? {color: '#03045e'} : {backgroundColor: '#0096c7', color: 'white'}}
+                                    style={showCandidacy ? {color: '#03045e'} : {backgroundColor: currentColors.navButton3, color: currentColors.buttonText || 'white'}}
                                 >
                                     Jones Candidacy
                                 </button>
@@ -669,19 +1159,19 @@
                                         
                                         if (result.partial) {
                                             return (
-                                                <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg p-6">
+                                                <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-6" style={{color: '#374151'}}>
                                                     <h3 className="text-2xl font-bold mb-4 text-center">In Progress</h3>
                                                     <p className="text-lg leading-relaxed mb-4">{result.message}</p>
                                                     <div className="grid md:grid-cols-2 gap-4 mt-6">
                                                         <div className="bg-white/20 rounded p-4 text-center">
-                                                            <p className="text-sm text-yellow-100">Current GPA</p>
+                                                            <p className="text-sm mb-1" style={{color: '#374151'}}>Current GPA</p>
                                                             <p className="text-3xl font-bold">{result.gpa}</p>
-                                                            <p className="text-xs text-yellow-100 mt-1">{result.completed} of 4 courses</p>
+                                                            <p className="text-xs mt-1" style={{color: '#374151'}}>{result.completed} of 4 courses</p>
                                                         </div>
                                                         <div className="bg-white/20 rounded p-4 text-center">
-                                                            <p className="text-sm text-yellow-100">Target Grade Needed</p>
+                                                            <p className="text-sm mb-1" style={{color: '#374151'}}>Target Grade Needed</p>
                                                             <p className="text-3xl font-bold">{result.neededGrade}</p>
-                                                            <p className="text-xs text-yellow-100 mt-1">Average in remaining courses</p>
+                                                            <p className="text-xs mt-1" style={{color: '#374151'}}>Average in remaining courses</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -727,6 +1217,12 @@
                                         >
                                             Reset Candidacy Calculator
                                         </button>
+                                        <button
+                                            onClick={() => setShowPDFDialog(true)}
+                                            className="ml-3 flex-inline items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                                        >
+                                            Export to PDF
+                                        </button>
                                     </div>
                                 </>
                             ) : !showGoalPlanner ? (
@@ -742,7 +1238,7 @@
                                                                 ? 'text-white font-semibold shadow-md'
                                                                 : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
                                                         }`}
-                                                        style={activeSemester === index ? {backgroundColor: '#0077b6'} : {}}
+                                                        style={activeSemester === index ? {backgroundColor: currentColors.activeTab} : {}}
                                                     >
                                                         {semester.name}
                                                     </button>
@@ -778,7 +1274,7 @@
                                             <button
                                                 onClick={addSemester}
                                                 className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition flex items-center gap-2 shadow-md"
-                                                style={{backgroundColor: '#00b4d8'}}
+                                                style={{backgroundColor: currentColors.addButton, color: currentColors.buttonText || 'white'}}
                                             >
                                                 <PlusCircle size={18} />
                                                 Add Semester
@@ -787,19 +1283,19 @@
                                     </div>
 
                                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                        <div className="text-white rounded-lg p-4 text-center" style={{background: 'linear-gradient(135deg, #0077b6 0%, #0096c7 100%)'}}>
+                                        <div className="text-white rounded-lg p-4 text-center" style={{background: currentColors.card1, color: currentColors.cardText || 'white'}}>
                                             <p className="text-sm mb-1">Cumulative GPA</p>
                                             <p className="text-3xl font-bold">{calculateCumulativeGPA()}</p>
                                         </div>
-                                        <div className="text-white rounded-lg p-4 text-center" style={{background: 'linear-gradient(135deg, #00b4d8 0%, #48cae4 100%)'}}>
+                                        <div className="text-white rounded-lg p-4 text-center" style={{background: currentColors.card2, color: currentColors.cardText || 'white'}}>
                                             <p className="text-sm mb-1">Semester GPA</p>
                                             <p className="text-3xl font-bold">{calculateSemesterGPA(activeSemester)}</p>
                                         </div>
-                                        <div className="text-white rounded-lg p-4 text-center" style={{background: 'linear-gradient(135deg, #023e8a 0%, #0077b6 100%)'}}>
+                                        <div className="text-white rounded-lg p-4 text-center" style={{background: currentColors.card3, color: currentColors.cardText || 'white'}}>
                                             <p className="text-sm mb-1">Credits Earned</p>
                                             <p className="text-3xl font-bold">{getTotalCredits().earned}</p>
                                         </div>
-                                        <div className="text-white rounded-lg p-4 text-center" style={{background: 'linear-gradient(135deg, #0096c7 0%, #00b4d8 100%)'}}>
+                                        <div className="text-white rounded-lg p-4 text-center" style={{background: currentColors.card4, color: currentColors.cardText || 'white'}}>
                                             <p className="text-sm mb-1">Credits Attempted</p>
                                             <p className="text-3xl font-bold">{getTotalCredits().attempted}</p>
                                         </div>
@@ -892,15 +1388,26 @@
                                         <button
                                             onClick={() => addCourse(activeSemester)}
                                             className="flex items-center gap-2 px-4 py-2 text-white rounded hover:opacity-90 transition"
-                                            style={{backgroundColor: '#0077b6'}}
+                                            style={{backgroundColor: currentColors.actionButton, color: currentColors.buttonText || 'white'}}
                                         >
                                             <PlusCircle size={20} />
                                             Add Course
                                         </button>
                                         <button
+                                            onClick={() => setShowPDFDialog(true)}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                <polyline points="7 10 12 15 17 10"></polyline>
+                                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                                            </svg>
+                                            Export to PDF
+                                        </button>
+                                        <button
                                             onClick={resetAllData}
                                             className="px-4 py-2 text-white rounded hover:opacity-90 transition"
-                                            style={{backgroundColor: '#48cae4'}}
+                                            style={{backgroundColor: currentColors.infoBox, color: currentColors.buttonText || 'white'}}
                                         >
                                             Reset All
                                         </button>
@@ -909,9 +1416,17 @@
                             ) : (
                                 <>
                                     <div className="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 rounded">
-                                        <p className="text-gray-700">
+                                        <p className="text-gray-700 mb-3">
                                             Enter your current GPA and credit hours, then specify your goal GPA and how many credit hours you plan to take. We'll calculate what grades you need to achieve your goal.
                                         </p>
+                                        <div className="bg-white rounded p-3">
+                                            <p className="font-semibold text-blue-900 mb-2">📍 Where to Find Your Information:</p>
+                                            <div className="text-sm text-gray-700">
+                                                <p className="mb-2">Go to: <strong>PipelineMT → Registration & Student Records → GPAs</strong> (under Academic Records)</p>
+                                                <p className="mb-1"><strong>Use your Inclusive GPA and GPA Hours</strong></p>
+                                                <p className="text-xs text-gray-600 italic">(Inclusive GPA is used for Jones College candidacy and program admissions)</p>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -950,7 +1465,7 @@
 
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                                Current Total Credit Hours
+                                                Current GPA Hours
                                             </label>
                                             <input
                                                 type="number"
@@ -961,6 +1476,7 @@
                                                 onChange={(e) => setCurrentCredits(e.target.value)}
                                                 className="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
+                                            <p className="text-xs text-gray-500 mt-1">Use the GPA Hours shown next to your Inclusive GPA</p>
                                         </div>
 
                                         <div>
@@ -1046,6 +1562,26 @@
                                         
                                         return null;
                                     })()}
+                                    
+                                    <div className="mt-6">
+                                        <button
+                                            onClick={() => {
+                                                setCurrentGPA('');
+                                                setCurrentCredits('');
+                                                setGoalGPA('');
+                                                setPlannedCredits('');
+                                            }}
+                                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+                                        >
+                                            Reset Goal Planner
+                                        </button>
+                                        <button
+                                            onClick={() => setShowPDFDialog(true)}
+                                            className="ml-3 flex-inline items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                                        >
+                                            Export to PDF
+                                        </button>
+                                    </div>
                                 </>
                             )}
 
